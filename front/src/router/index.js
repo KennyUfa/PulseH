@@ -28,6 +28,24 @@ const router = createRouter({
       component: () => import('@/views/CreateSurveyView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/surveys',
+      name: 'surveys',
+      component: () => import('@/views/SurveysListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/surveys/:id',
+      name: 'survey-detail',
+      component: () => import('@/views/SurveyDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/surveys/:id/edit',
+      name: 'survey-edit',
+      component: () => import('@/views/EditSurveyView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 });
 
