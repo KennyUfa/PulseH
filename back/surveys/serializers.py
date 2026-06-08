@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Survey, Question, AnswerOption
+from .models import Survey, Question, AnswerOption, SurveyResponse, Answer
 
 
 class AnswerOptionSerializer(serializers.ModelSerializer):
@@ -53,3 +53,25 @@ class SurveySerializer(serializers.ModelSerializer):
                 o_data.setdefault('order', j)
                 AnswerOption.objects.create(question=question, **o_data)
         return survey
+
+
+class AnswerSubmitSerializer(serializers.Serializer):
+    question = serializers.PrimaryKeyRelatedField(queryset=Question.objects.all())
+    selected_options = serializers.PrimaryKeyRelatedField(
+        queryset=AnswerOption.objects.all(), many=True
+    )
+
+
+class SurveyResponseSerializer(serializers.Serializer):
+    answers = AnswerSubmitSerializer(many=True)
+
+    def create(self, validated_data):
+        survey = self.context['survey']
+        request = self.context['request']
+        user = None if survey.is_anonymous else request.user
+
+        response = SurveyResponse.objects.create(survey=survey, user=user)
+        for a in validated_data['answers']:
+            answer = Answer.objects.create(response=response, question=a['question'])
+            answer.selected_options.set(a['selected_options'])
+        return response

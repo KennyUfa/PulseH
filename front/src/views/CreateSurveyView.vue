@@ -7,6 +7,13 @@ const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 
+const STATUS_OPTIONS = [
+  { value: 'draft', label: 'Черновик' },
+  { value: 'active', label: 'Активный' },
+  { value: 'completed', label: 'Завершён' },
+  { value: 'archived', label: 'Архив' },
+]
+
 const form = reactive({
   title: '',
   description: '',
@@ -82,6 +89,13 @@ async function submit() {
         <div class="field">
           <label>Описание</label>
           <textarea v-model="form.description" rows="3" placeholder="Краткое описание или инструкция для сотрудников" />
+        </div>
+
+        <div class="field">
+          <label>Статус</label>
+          <select v-model="form.status" class="select">
+            <option v-for="s in STATUS_OPTIONS" :key="s.value" :value="s.value">{{ s.label }}</option>
+          </select>
         </div>
 
         <div class="field field-row">
@@ -242,6 +256,18 @@ async function submit() {
   font-family: inherit;
 }
 .field input:focus, .field textarea:focus { border-color: #4f46e5; }
+.select {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  outline: none;
+  background: #fff;
+  cursor: pointer;
+}
+.select:focus { border-color: #4f46e5; }
+
 .req { color: #e53e3e; }
 .hint { display: block; font-size: 0.8rem; color: #888; font-weight: 400; }
 
