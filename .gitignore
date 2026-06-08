@@ -12,3 +12,9 @@ back/db.sqlite3
 
 # Node
 node_modules/
+
+# Draft frontend reference (not part of the project)
+pulseHR-front/
+
+# macOS
+.DS_Store

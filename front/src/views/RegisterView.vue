@@ -33,10 +33,7 @@ async function submit() {
     <div class="auth-card">
       <div class="auth-header">
         <div class="logo-circle">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <circle cx="14" cy="14" r="14" fill="white"/>
-            <path d="M8 14 Q14 8 20 14 Q14 20 8 14Z" fill="#E8390E"/>
-          </svg>
+          <img src="@/assets/logosks.jpg" alt="PulseHR logo" class="logo-img" />
         </div>
         <h1 class="brand">PulseHR</h1>
       </div>
@@ -90,7 +87,9 @@ async function submit() {
   width: 44px; height: 44px; border-radius: 50%;
   background: rgba(255,255,255,0.2);
   display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
+.logo-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .brand { font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin: 0; }
 .auth-form { display: flex; flex-direction: column; gap: 0.75rem; }
 .row { display: flex; gap: 0.5rem; }
