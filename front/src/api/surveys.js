@@ -8,3 +8,7 @@ export const patchSurvey = (id, data) => api.patch(`/surveys/surveys/${id}/`, da
 export const deleteSurvey = (id) => api.delete(`/surveys/surveys/${id}/`)
 export const submitSurveyResponse = (id, data) => api.post(`/surveys/surveys/${id}/respond/`, data)
 export const getMyResponse = (id) => api.get(`/surveys/surveys/${id}/my_response/`)
+
+// Analytics (HR only)
+export const getSurveyResultsList = () => api.get('/analytics/surveys/')
+export const getSurveyResults = (id) => api.get(`/analytics/surveys/${id}/`)

@@ -2,43 +2,29 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getSurvey, submitSurveyResponse, getMyResponse } from '@/api/surveys'
+import AppLayout from '@/components/AppLayout.vue'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 
 const route = useRoute()
 const router = useRouter()
 
 const survey = ref(null)
-const myResponse = ref(null)   // previous response if exists
+const myResponse = ref(null)
 const loading = ref(true)
 const submitting = ref(false)
 const submitted = ref(false)
 const error = ref('')
 const submitError = ref('')
 
-// answers[questionId] = optionId (single) | Set<optionId> (multiple)
 const answers = reactive({})
 
-// Build a map: questionId → Set of selected optionIds from previous response
-const previousAnswers = computed(() => {
-  if (!myResponse.value) return {}
-  const map = {}
-  for (const a of myResponse.value.answers) {
-    map[a.question] = new Set(a.selected_options)
-  }
-  return map
-})
-
-const STATUS_LABEL = {
-  draft: 'Черновик',
-  active: 'Активный',
-  completed: 'Завершён',
-  archived: 'Архив',
-}
-
-const STATUS_CLASS = {
-  draft: 'status-draft',
-  active: 'status-active',
-  completed: 'status-completed',
-  archived: 'status-archived',
+const STATUS_LABEL = { draft: 'Черновик', active: 'Активный', completed: 'Завершён', archived: 'Архив' }
+const STATUS_BADGE = {
+  draft: 'bg-gray-100 text-gray-600',
+  active: 'bg-green-100 text-green-700',
+  completed: 'bg-blue-100 text-blue-700',
+  archived: 'bg-gray-100 text-gray-400',
 }
 
 onMounted(async () => {
@@ -47,367 +33,222 @@ onMounted(async () => {
       getSurvey(route.params.id),
       getMyResponse(route.params.id),
     ])
-
     if (surveyRes.status === 'fulfilled') {
       survey.value = surveyRes.value.data
       for (const q of survey.value.questions) {
-        answers[q.id] = q.question_type === 'multiple' ? new Set() : null
+        if (q.question_type === 'multiple') answers[q.id] = new Set()
+        else if (q.question_type === 'text') answers[q.id] = ''
+        else answers[q.id] = null
       }
-    } else {
-      error.value = 'Опрос не найден или недоступен'
-    }
-
+    } else { error.value = 'Опрос не найден или недоступен' }
     if (responseRes.status === 'fulfilled' && responseRes.value.status === 200) {
       myResponse.value = responseRes.value.data
     }
-  } finally {
-    loading.value = false
-  }
+  } finally { loading.value = false }
 })
 
-function toggleMultiple(questionId, optionId) {
-  const set = answers[questionId]
-  if (set.has(optionId)) set.delete(optionId)
-  else set.add(optionId)
+const previousAnswers = computed(() => {
+  if (!myResponse.value) return {}
+  const map = {}
+  for (const a of myResponse.value.answers) {
+    map[a.question] = { options: new Set(a.selected_options), text: a.text_answer || '' }
+  }
+  return map
+})
+
+function isVisible(qi) {
+  const q = survey.value.questions[qi]
+  if (q.condition_question_index == null) return true
+  const depQ = survey.value.questions[q.condition_question_index]
+  if (!depQ) return true
+  const depAnswer = answers[depQ.id]
+  let selectedIds = depAnswer instanceof Set ? [...depAnswer] : (depAnswer !== null ? [depAnswer] : [])
+  if (!selectedIds.length) return false
+  return selectedIds.some(optId => {
+    const opt = depQ.options.find(o => o.id === optId)
+    return opt && opt.text === q.condition_option_text
+  })
 }
 
-function isChecked(questionId, optionId) {
-  const val = answers[questionId]
-  if (val instanceof Set) return val.has(optionId)
-  return val === optionId
+function npsLabel(score) {
+  const n = parseInt(score)
+  if (n >= 9) return 'Промоутер'
+  if (n >= 7) return 'Нейтрал'
+  return 'Критик'
+}
+
+function npsBtnClass(n, selected) {
+  const isSelected = selected === String(n)
+  if (n <= 6) return isSelected ? 'border-red-500 bg-red-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-red-400 hover:text-red-500'
+  if (n <= 8) return isSelected ? 'border-amber-400 bg-amber-400 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-amber-400 hover:text-amber-500'
+  return isSelected ? 'border-green-500 bg-green-500 text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-green-400 hover:text-green-600'
+}
+
+function toggleMultiple(qid, oid) {
+  const s = answers[qid]
+  s.has(oid) ? s.delete(oid) : s.add(oid)
+}
+
+function isChecked(qid, oid) {
+  const val = answers[qid]
+  return val instanceof Set ? val.has(oid) : val === oid
 }
 
 async function submit() {
   submitError.value = ''
   const payload = {
-    answers: survey.value.questions.map(q => {
-      const val = answers[q.id]
-      return {
-        question: q.id,
-        selected_options: val instanceof Set ? [...val] : (val !== null ? [val] : []),
-      }
-    }),
+    answers: survey.value.questions
+      .filter((_, qi) => isVisible(qi))
+      .map(q => {
+        const val = answers[q.id]
+        if (q.question_type === 'text' || q.question_type === 'scale' || q.question_type === 'nps') {
+          return { question: q.id, selected_options: [], text_answer: val || '' }
+        }
+        return {
+          question: q.id,
+          selected_options: val instanceof Set ? [...val] : (val !== null ? [val] : []),
+          text_answer: '',
+        }
+      }),
   }
   submitting.value = true
-  try {
-    await submitSurveyResponse(survey.value.id, payload)
-    submitted.value = true
-  } catch (e) {
-    submitError.value = e.response?.data?.detail || 'Ошибка при отправке ответов'
-  } finally {
-    submitting.value = false
-  }
+  try { await submitSurveyResponse(survey.value.id, payload); submitted.value = true }
+  catch (e) { submitError.value = e.response?.data?.detail || 'Ошибка при отправке ответов' }
+  finally { submitting.value = false }
 }
 </script>
 
 <template>
-  <div class="page">
-    <header class="topbar">
-      <span class="logo">PulseHR</span>
-      <button class="back-btn" @click="router.go(-1)">← Назад</button>
-    </header>
+  <AppLayout :back="router.currentRoute.value.query.from || '/'" back-label="← Назад">
+    <div v-if="loading" class="text-gray-400 text-sm">Загрузка...</div>
+    <div v-else-if="error" class="text-red-500 text-sm">{{ error }}</div>
 
-    <main class="content">
-      <div v-if="loading" class="state-msg">Загрузка...</div>
-      <div v-else-if="error" class="state-msg error">{{ error }}</div>
+    <!-- Успех -->
+    <div v-else-if="submitted" class="bg-white rounded-xl shadow-sm p-12 text-center">
+      <div class="w-16 h-16 rounded-full bg-green-100 text-green-700 text-2xl flex items-center justify-center mx-auto mb-5">✓</div>
+      <h2 class="text-xl font-bold mb-2">Ответы отправлены!</h2>
+      <p class="text-gray-400 mb-6">Спасибо за прохождение опроса.</p>
+      <Button class="hover:opacity-80" @click="router.push('/')">На главную</Button>
+    </div>
 
-      <!-- Success screen after submitting -->
-      <div v-else-if="submitted" class="result-card">
-        <div class="result-icon success">✓</div>
-        <h2>Ответы отправлены!</h2>
-        <p>Спасибо за прохождение опроса.</p>
-        <button class="btn-action" @click="router.go(-1)">Вернуться назад</button>
+    <template v-else-if="survey">
+      <!-- Заголовок -->
+      <div class="bg-white rounded-xl shadow-sm p-6 mb-3">
+        <div class="flex items-start justify-between gap-4 mb-2">
+          <h1 class="text-xl font-bold text-gray-900">{{ survey.title }}</h1>
+          <div class="flex gap-2 shrink-0 flex-wrap">
+            <span class="text-xs font-medium px-2.5 py-0.5 rounded-full" :class="STATUS_BADGE[survey.status]">{{ STATUS_LABEL[survey.status] }}</span>
+            <span v-if="survey.is_anonymous" class="text-xs font-medium bg-violet-100 text-violet-700 px-2.5 py-0.5 rounded-full">Анонимный</span>
+          </div>
+        </div>
+        <p v-if="survey.description" class="text-sm text-gray-500 leading-relaxed">{{ survey.description }}</p>
       </div>
 
-      <template v-else-if="survey">
-        <div class="survey-header">
-          <div class="survey-title-row">
-            <h1>{{ survey.title }}</h1>
-            <div class="badges">
-              <span class="badge-status" :class="STATUS_CLASS[survey.status]">
-                {{ STATUS_LABEL[survey.status] }}
-              </span>
-              <span v-if="survey.is_anonymous" class="badge-anon">Анонимный</span>
-            </div>
-          </div>
-          <p v-if="survey.description" class="survey-desc">{{ survey.description }}</p>
-        </div>
+      <!-- Уже пройден -->
+      <div v-if="myResponse" class="flex items-center justify-between bg-green-50 text-green-800 rounded-xl px-5 py-3 text-sm font-medium mb-3">
+        <span>✓ Вы уже прошли этот опрос</span>
+        <span class="text-xs font-normal opacity-80">
+          {{ new Date(myResponse.submitted_at).toLocaleDateString('ru-RU', { day:'numeric', month:'long', year:'numeric' }) }}
+        </span>
+      </div>
 
-        <!-- Already completed banner -->
-        <div v-if="myResponse" class="completed-banner">
-          <span class="completed-icon">✓</span>
-          <span>Вы уже прошли этот опрос</span>
-          <span class="completed-date">
-            {{ new Date(myResponse.submitted_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) }}
-          </span>
-        </div>
+      <div v-if="!survey.questions?.length" class="text-gray-400 text-sm">В этом опросе пока нет вопросов</div>
 
-        <div v-if="!survey.questions || survey.questions.length === 0" class="state-msg">
-          В этом опросе пока нет вопросов
-        </div>
+      <template v-else>
+        <div class="flex flex-col gap-3 mb-5">
+          <template v-for="(question, qi) in survey.questions" :key="question.id">
+            <div v-if="myResponse || isVisible(qi)" class="bg-white rounded-xl shadow-sm p-5" :class="{ 'opacity-90': !!myResponse }">
+              <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-600 mb-1.5">Вопрос {{ qi + 1 }}</p>
+              <p class="text-base font-semibold text-gray-900 mb-4">{{ question.text }}</p>
 
-        <template v-else>
-          <div class="questions-list">
-            <div
-              v-for="(question, qi) in survey.questions"
-              :key="question.id"
-              class="question-card"
-              :class="{ 'read-only': !!myResponse }"
-            >
-              <div class="question-num">Вопрос {{ qi + 1 }}</div>
-              <div class="question-text">{{ question.text }}</div>
-
-              <div class="options-list">
-                <!-- Read-only mode: show previous answers -->
-                <template v-if="myResponse">
-                  <div
-                    v-for="option in question.options"
-                    :key="option.id"
-                    class="option-row"
-                    :class="{ selected: previousAnswers[question.id]?.has(option.id) }"
-                  >
-                    <span class="option-mark">
-                      <span v-if="previousAnswers[question.id]?.has(option.id)">
-                        {{ question.question_type === 'single' ? '●' : '✓' }}
-                      </span>
-                      <span v-else class="option-empty">
-                        {{ question.question_type === 'single' ? '○' : '□' }}
-                      </span>
+              <!-- Режим просмотра -->
+              <template v-if="myResponse">
+                <div v-if="question.question_type === 'scale'" class="flex items-center gap-3">
+                  <span class="text-sm text-gray-400">Ваш ответ:</span>
+                  <span class="w-11 h-11 rounded-lg bg-indigo-600 text-white font-bold text-base flex items-center justify-center">
+                    {{ previousAnswers[question.id]?.text || '—' }}
+                  </span>
+                </div>
+                <div v-else-if="question.question_type === 'nps'" class="flex items-center gap-3">
+                  <span class="text-sm text-gray-400">Ваш ответ:</span>
+                  <span
+                    class="w-11 h-11 rounded-lg text-white font-bold text-base flex items-center justify-center"
+                    :class="parseInt(previousAnswers[question.id]?.text) >= 9 ? 'bg-green-500' : parseInt(previousAnswers[question.id]?.text) >= 7 ? 'bg-amber-400' : 'bg-red-500'"
+                  >{{ previousAnswers[question.id]?.text || '—' }}</span>
+                  <span class="text-sm text-gray-500">{{ npsLabel(previousAnswers[question.id]?.text) }}</span>
+                </div>
+                <div v-else-if="question.question_type === 'text'" class="bg-gray-50 rounded-lg px-3 py-2.5 text-sm text-gray-700 min-h-10 whitespace-pre-wrap">
+                  {{ previousAnswers[question.id]?.text || '—' }}
+                </div>
+                <div v-else class="flex flex-col gap-1">
+                  <div v-for="opt in question.options" :key="opt.id" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors" :class="previousAnswers[question.id]?.options.has(opt.id) ? 'bg-green-50 text-green-800 font-medium' : 'text-gray-500'">
+                    <span class="shrink-0 w-4 text-center">
+                      <span v-if="previousAnswers[question.id]?.options.has(opt.id)" class="text-green-600">{{ question.question_type === 'single' ? '●' : '✓' }}</span>
+                      <span v-else class="text-gray-300">{{ question.question_type === 'single' ? '○' : '□' }}</span>
                     </span>
-                    <span>{{ option.text }}</span>
+                    {{ opt.text }}
                   </div>
-                </template>
+                </div>
+              </template>
 
-                <!-- Interactive mode -->
-                <template v-else>
-                  <label
-                    v-if="question.question_type === 'single'"
-                    v-for="option in question.options"
-                    :key="option.id"
-                    class="option-row"
-                  >
-                    <input
-                      type="radio"
-                      :name="`q-${question.id}`"
-                      :value="option.id"
-                      :checked="answers[question.id] === option.id"
-                      class="option-input"
-                      @change="answers[question.id] = option.id"
-                    />
-                    <span>{{ option.text }}</span>
+              <!-- Интерактивный режим -->
+              <template v-else>
+                <div v-if="question.question_type === 'scale'" class="flex gap-2 flex-wrap">
+                  <button
+                    v-for="n in 10"
+                    :key="n"
+                    class="w-11 h-11 rounded-lg border-2 text-base font-semibold cursor-pointer transition-all"
+                    :class="answers[question.id] === String(n)
+                      ? 'border-indigo-600 bg-indigo-600 text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-indigo-400 hover:text-indigo-600'"
+                    type="button"
+                    @click="answers[question.id] = String(n)"
+                  >{{ n }}</button>
+                </div>
+                <div v-else-if="question.question_type === 'nps'" class="space-y-2">
+                  <div class="flex gap-1.5 flex-wrap">
+                    <button
+                      v-for="n in 11"
+                      :key="n - 1"
+                      class="w-11 h-11 rounded-lg border-2 text-base font-semibold cursor-pointer transition-all"
+                      :class="npsBtnClass(n - 1, answers[question.id])"
+                      type="button"
+                      @click="answers[question.id] = String(n - 1)"
+                    >{{ n - 1 }}</button>
+                  </div>
+                  <div class="flex justify-between text-xs text-gray-400 px-0.5">
+                    <span>Точно не порекомендую</span>
+                    <span>Точно порекомендую</span>
+                  </div>
+                </div>
+                <Textarea v-else-if="question.question_type === 'text'" v-model="answers[question.id]" :rows="3" placeholder="Введите ваш ответ..." />
+                <div v-else-if="question.question_type === 'single'" class="flex flex-col gap-1">
+                  <label v-for="opt in question.options" :key="opt.id" class="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer hover:bg-indigo-50 text-sm transition-colors text-gray-700">
+                    <input type="radio" :name="`q-${question.id}`" :value="opt.id" :checked="answers[question.id] === opt.id" class="shrink-0 cursor-pointer" @change="answers[question.id] = opt.id" />
+                    {{ opt.text }}
                   </label>
-
-                  <label
-                    v-if="question.question_type === 'multiple'"
-                    v-for="option in question.options"
-                    :key="option.id"
-                    class="option-row"
-                  >
-                    <input
-                      type="checkbox"
-                      :checked="isChecked(question.id, option.id)"
-                      class="option-input"
-                      @change="toggleMultiple(question.id, option.id)"
-                    />
-                    <span>{{ option.text }}</span>
+                </div>
+                <div v-else-if="question.question_type === 'multiple'" class="flex flex-col gap-1">
+                  <label v-for="opt in question.options" :key="opt.id" class="flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer hover:bg-indigo-50 text-sm transition-colors text-gray-700">
+                    <input type="checkbox" :checked="isChecked(question.id, opt.id)" class="shrink-0 cursor-pointer" @change="toggleMultiple(question.id, opt.id)" />
+                    {{ opt.text }}
                   </label>
-                </template>
-              </div>
-            </div>
-          </div>
-
-          <!-- Submit button — hidden if already completed -->
-          <template v-if="!myResponse">
-            <p v-if="submitError" class="submit-error">{{ submitError }}</p>
-            <div class="actions">
-              <button
-                class="btn-submit"
-                :disabled="submitting || survey.status !== 'active'"
-                @click="submit"
-              >
-                {{ submitting ? 'Отправляем...' : 'Отправить ответы' }}
-              </button>
-              <span v-if="survey.status !== 'active'" class="inactive-hint">
-                Опрос не активен — отправка недоступна
-              </span>
+                </div>
+              </template>
             </div>
           </template>
+        </div>
+
+        <template v-if="!myResponse">
+          <p v-if="submitError" class="text-red-500 text-sm mb-3">{{ submitError }}</p>
+          <div class="flex items-center gap-4">
+            <Button :disabled="submitting || survey.status !== 'active'" class="hover:opacity-80" @click="submit">
+              {{ submitting ? 'Отправляем...' : 'Отправить ответы' }}
+            </Button>
+            <span v-if="survey.status !== 'active'" class="text-sm text-gray-400">Опрос не активен</span>
+          </div>
         </template>
       </template>
-    </main>
-  </div>
+    </template>
+  </AppLayout>
 </template>
-
-<style scoped>
-.page { min-height: 100vh; background: #f5f5f5; }
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
-  height: 56px;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-.logo { font-size: 1.3rem; font-weight: 700; color: #4f46e5; }
-.back-btn {
-  background: none;
-  border: 1px solid #ddd;
-  padding: 0.4rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: #555;
-}
-.back-btn:hover { border-color: #4f46e5; color: #4f46e5; }
-
-.content { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
-
-.state-msg { color: #888; font-size: 0.95rem; }
-.state-msg.error { color: #e53e3e; }
-
-/* Success / result card */
-.result-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
-  padding: 3rem 2rem;
-  text-align: center;
-}
-.result-icon {
-  width: 64px; height: 64px;
-  border-radius: 50%;
-  font-size: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.25rem;
-}
-.result-icon.success { background: #dcfce7; color: #166534; }
-.result-card h2 { margin: 0 0 0.5rem; font-size: 1.4rem; }
-.result-card p { color: #666; margin: 0 0 1.5rem; }
-.btn-action {
-  padding: 0.6rem 1.5rem;
-  background: #4f46e5;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-.btn-action:hover { background: #4338ca; }
-
-/* Survey header */
-.survey-header {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
-  padding: 1.75rem;
-  margin-bottom: 1rem;
-}
-.survey-title-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-}
-.survey-title-row h1 { font-size: 1.5rem; margin: 0; }
-.badges { display: flex; gap: 0.5rem; flex-shrink: 0; align-items: center; }
-
-.badge-status {
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 500;
-}
-.status-draft    { background: #f3f4f6; color: #555; }
-.status-active   { background: #dcfce7; color: #166534; }
-.status-completed { background: #dbeafe; color: #1e40af; }
-.status-archived { background: #f3f4f6; color: #9ca3af; }
-
-.badge-anon {
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  background: #ede9fe;
-  color: #6d28d9;
-}
-.survey-desc { margin: 0; color: #666; font-size: 0.95rem; line-height: 1.5; }
-
-/* Completed banner */
-.completed-banner {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background: #dcfce7;
-  color: #166534;
-  border-radius: 10px;
-  padding: 0.75rem 1.25rem;
-  font-size: 0.95rem;
-  font-weight: 500;
-  margin-bottom: 1rem;
-}
-.completed-icon { font-size: 1.1rem; }
-.completed-date { margin-left: auto; font-weight: 400; font-size: 0.85rem; color: #166534; opacity: 0.75; }
-
-/* Questions */
-.questions-list { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
-
-.question-card {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.07);
-  padding: 1.5rem;
-}
-.question-card.read-only { opacity: 0.9; }
-
-.question-num { font-size: 0.8rem; font-weight: 600; color: #4f46e5; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.03em; }
-.question-text { font-size: 1rem; font-weight: 600; color: #1a1a1a; margin-bottom: 1rem; }
-
-.options-list { display: flex; flex-direction: column; gap: 0.5rem; }
-
-.option-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.95rem;
-  color: #333;
-  padding: 0.5rem 0.75rem;
-  border-radius: 7px;
-  transition: background 0.1s;
-}
-label.option-row { cursor: pointer; }
-label.option-row:hover { background: #f5f4ff; }
-
-.option-row.selected {
-  background: #f0fdf4;
-  color: #166534;
-  font-weight: 500;
-}
-.option-mark { font-size: 1rem; flex-shrink: 0; width: 1.1rem; text-align: center; color: #16a34a; }
-.option-empty { color: #ccc; }
-.option-input { flex-shrink: 0; cursor: pointer; }
-
-.submit-error { color: #e53e3e; font-size: 0.9rem; margin-bottom: 0.75rem; }
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 3rem;
-}
-.btn-submit {
-  padding: 0.7rem 2rem;
-  background: #4f46e5;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-.btn-submit:hover:not(:disabled) { background: #4338ca; }
-.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-.inactive-hint { font-size: 0.85rem; color: #999; }
-</style>

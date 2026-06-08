@@ -46,6 +46,18 @@ const router = createRouter({
       component: () => import('@/views/EditSurveyView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/results',
+      name: 'results',
+      component: () => import('@/views/ResultsListView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/results/:id',
+      name: 'results-detail',
+      component: () => import('@/views/ResultsDetailView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 });
 

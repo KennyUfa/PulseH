@@ -13,7 +13,8 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ('id', 'text', 'question_type', 'order', 'options')
+        fields = ('id', 'text', 'question_type', 'order', 'options',
+                  'condition_question_index', 'condition_option_text')
 
 
 class SurveySerializer(serializers.ModelSerializer):
@@ -67,7 +68,7 @@ class AnswerDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Answer
-        fields = ('question', 'selected_options')
+        fields = ('question', 'selected_options', 'text_answer')
 
 
 class SurveyResponseDetailSerializer(serializers.ModelSerializer):
@@ -81,8 +82,9 @@ class SurveyResponseDetailSerializer(serializers.ModelSerializer):
 class AnswerSubmitSerializer(serializers.Serializer):
     question = serializers.PrimaryKeyRelatedField(queryset=Question.objects.all())
     selected_options = serializers.PrimaryKeyRelatedField(
-        queryset=AnswerOption.objects.all(), many=True
+        queryset=AnswerOption.objects.all(), many=True, required=False, default=list
     )
+    text_answer = serializers.CharField(required=False, allow_blank=True, default='')
 
 
 class SurveyResponseSerializer(serializers.Serializer):
@@ -95,6 +97,10 @@ class SurveyResponseSerializer(serializers.Serializer):
 
         response = SurveyResponse.objects.create(survey=survey, user=user)
         for a in validated_data['answers']:
-            answer = Answer.objects.create(response=response, question=a['question'])
-            answer.selected_options.set(a['selected_options'])
+            answer = Answer.objects.create(
+                response=response,
+                question=a['question'],
+                text_answer=a.get('text_answer', ''),
+            )
+            answer.selected_options.set(a.get('selected_options', []))
         return response

@@ -33,18 +33,26 @@ class Survey(models.Model):
 
 
 class Question(models.Model):
-    # Тип вопроса определяет, сколько вариантов может выбрать сотрудник
-    TYPE_SINGLE = 'single'      # Один вариант (radio)
-    TYPE_MULTIPLE = 'multiple'  # Несколько вариантов (checkbox)
+    TYPE_SINGLE = 'single'
+    TYPE_MULTIPLE = 'multiple'
+    TYPE_SCALE = 'scale'
+    TYPE_TEXT = 'text'
+    TYPE_NPS = 'nps'
     TYPE_CHOICES = [
         (TYPE_SINGLE, 'Один вариант'),
         (TYPE_MULTIPLE, 'Несколько вариантов'),
+        (TYPE_SCALE, 'Шкала 1-10'),
+        (TYPE_TEXT, 'Текстовый ответ'),
+        (TYPE_NPS, 'NPS (0-10)'),
     ]
 
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='questions')
-    text = models.CharField(max_length=500)  # Текст вопроса
+    text = models.CharField(max_length=500)
     question_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=TYPE_SINGLE)
-    order = models.PositiveIntegerField(default=0)    # Порядок отображения в опросе
+    order = models.PositiveIntegerField(default=0)
+    # Условная логика: показывать вопрос только если у вопроса с указанным индексом выбран вариант с указанным текстом
+    condition_question_index = models.IntegerField(null=True, blank=True)
+    condition_option_text = models.CharField(max_length=255, blank=True, default='')
 
     class Meta:
         ordering = ['order']
@@ -79,10 +87,10 @@ class SurveyResponse(models.Model):
 
 
 class Answer(models.Model):
-    # Ответ на один вопрос в рамках SurveyResponse
     response = models.ForeignKey(SurveyResponse, on_delete=models.CASCADE, related_name='answers')
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     selected_options = models.ManyToManyField(AnswerOption, blank=True)
+    text_answer = models.CharField(max_length=2000, blank=True, default='')
 
     def __str__(self):
         return f'Answer to "{self.question}"'

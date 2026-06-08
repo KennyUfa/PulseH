@@ -1,8 +1,7 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-
-router = DefaultRouter()
+from django.urls import path
+from .views import SurveyResultsListView, SurveyResultsDetailView
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('surveys/', SurveyResultsListView.as_view(), name='analytics-surveys'),
+    path('surveys/<int:pk>/', SurveyResultsDetailView.as_view(), name='analytics-survey-detail'),
 ]
