@@ -19,12 +19,19 @@ class QuestionSerializer(serializers.ModelSerializer):
 class SurveySerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True)
     created_by = serializers.StringRelatedField(read_only=True)
+    has_responded = serializers.SerializerMethodField()
 
     class Meta:
         model = Survey
         fields = ('id', 'title', 'description', 'is_anonymous', 'status',
-                  'created_by', 'created_at', 'questions')
-        read_only_fields = ('id', 'created_by', 'created_at')
+                  'created_by', 'created_at', 'questions', 'has_responded')
+        read_only_fields = ('id', 'created_by', 'created_at', 'has_responded')
+
+    def get_has_responded(self, obj):
+        request = self.context.get('request')
+        if not request or obj.is_anonymous:
+            return False
+        return obj.responses.filter(user=request.user).exists()
 
     def update(self, instance, validated_data):
         questions_data = validated_data.pop('questions', None)

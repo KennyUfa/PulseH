@@ -131,9 +131,8 @@ async function handleLogout() {
               </div>
             </div>
             <div class="survey-meta">
-              <span v-if="survey.is_anonymous" class="badge-anon"
-                >Анонимный</span
-              >
+              <span v-if="survey.has_responded" class="badge-done">✓ Пройден</span>
+              <span v-if="survey.is_anonymous" class="badge-anon">Анонимный</span>
               <span class="survey-questions">
                 {{ survey.questions.length }}
                 {{
@@ -284,6 +283,14 @@ async function handleLogout() {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+.badge-done {
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: #dcfce7;
+  color: #166534;
 }
 .badge-anon {
   padding: 0.2rem 0.65rem;
