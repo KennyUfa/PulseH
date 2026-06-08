@@ -1,5 +1,14 @@
 /.idea
 /.venv
-back/db.sqlite3
-**/__pycache__/
+.venv/
+venv/
+
+# Python
+__pycache__/
 **/*.pyc
+
+# Django
+back/db.sqlite3
+
+# Node
+node_modules/
