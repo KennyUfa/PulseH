@@ -1,2 +1,13 @@
 /.idea
-/.venv
+.venv/
+venv/
+
+# Python
+__pycache__/
+
+# Django
+db.sqlite3
+
+# Node
+node_modules/
+pulseHR-front

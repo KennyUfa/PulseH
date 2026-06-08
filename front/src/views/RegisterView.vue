@@ -29,37 +29,40 @@ async function submit() {
 </script>
 
 <template>
-  <div class="auth-page">
+  <div class="auth-wrap">
     <div class="auth-card">
-      <h1>PulseHR</h1>
-      <h2>Регистрация</h2>
+      <div class="auth-header">
+        <div class="logo-circle">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="14" fill="white"/>
+            <path d="M8 14 Q14 8 20 14 Q14 20 8 14Z" fill="#E8390E"/>
+          </svg>
+        </div>
+        <h1 class="brand">PulseHR</h1>
+      </div>
 
-      <form @submit.prevent="submit">
+      <form @submit.prevent="submit" class="auth-form">
         <div class="field">
-          <label>Номер телефона</label>
           <input v-model="phone" type="tel" placeholder="+79991234567" required />
         </div>
         <div class="row">
           <div class="field">
-            <label>Имя</label>
-            <input v-model="firstName" type="text" placeholder="Иван" />
+            <input v-model="firstName" type="text" placeholder="Имя" />
           </div>
           <div class="field">
-            <label>Фамилия</label>
-            <input v-model="lastName" type="text" placeholder="Иванов" />
+            <input v-model="lastName" type="text" placeholder="Фамилия" />
           </div>
         </div>
         <div class="field">
-          <label>Пароль</label>
-          <input v-model="password" type="password" required minlength="6" />
+          <input v-model="password" type="password" placeholder="Пароль (мин. 6 символов)" required minlength="6" />
         </div>
-        <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit" :disabled="loading">
+        <p v-if="error" class="err">{{ error }}</p>
+        <button type="submit" :disabled="loading" class="btn-primary">
           {{ loading ? 'Регистрируемся...' : 'Зарегистрироваться' }}
         </button>
       </form>
 
-      <p class="switch-link">
+      <p class="switch">
         Уже есть аккаунт? <RouterLink to="/login">Войти</RouterLink>
       </p>
     </div>
@@ -67,53 +70,45 @@ async function submit() {
 </template>
 
 <style scoped>
-.auth-page {
+.auth-wrap {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: #fff;
+  padding: 1.5rem;
 }
 .auth-card {
-  background: #fff;
-  padding: 2.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.1);
+  background: #E8390E;
+  border-radius: 20px;
+  padding: 2rem;
   width: 100%;
-  max-width: 400px;
+  max-width: 320px;
 }
-h1 { margin: 0 0 0.25rem; font-size: 1.6rem; color: #4f46e5; }
-h2 { margin: 0 0 1.5rem; font-size: 1.1rem; color: #555; font-weight: 400; }
-.field { margin-bottom: 1rem; }
-.field label { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; color: #333; }
-.field input {
-  width: 100%;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
-  box-sizing: border-box;
-  outline: none;
-  transition: border-color 0.2s;
+.auth-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
+.logo-circle {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
 }
-.field input:focus { border-color: #4f46e5; }
-.row { display: flex; gap: 0.75rem; }
+.brand { font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin: 0; }
+.auth-form { display: flex; flex-direction: column; gap: 0.75rem; }
+.row { display: flex; gap: 0.5rem; }
 .row .field { flex: 1; }
-button {
-  width: 100%;
-  padding: 0.7rem;
-  background: #4f46e5;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-top: 0.5rem;
-  transition: background 0.2s;
+.field input {
+  width: 100%; padding: 0.75rem 1rem; border: none; border-radius: 10px;
+  background: #fff; font-size: 0.95rem; font-family: 'Manrope', sans-serif;
+  outline: none; color: #333; box-sizing: border-box;
 }
-button:hover:not(:disabled) { background: #4338ca; }
-button:disabled { opacity: 0.6; cursor: not-allowed; }
-.error { color: #e53e3e; font-size: 0.88rem; margin: 0.5rem 0; }
-.switch-link { text-align: center; margin-top: 1.2rem; font-size: 0.9rem; color: #666; }
-.switch-link a { color: #4f46e5; text-decoration: none; }
+.field input::placeholder { color: #999; }
+.btn-primary {
+  width: 100%; padding: 0.75rem; background: #fff; color: #E8390E;
+  border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+  font-family: 'Manrope', sans-serif; cursor: pointer; margin-top: 0.25rem; transition: opacity 0.15s;
+}
+.btn-primary:hover:not(:disabled) { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.err { color: #ffd0c7; font-size: 0.85rem; text-align: center; margin: 0; }
+.switch { text-align: center; margin-top: 1.25rem; color: rgba(255,255,255,0.8); font-size: 0.88rem; }
+.switch a { color: #fff; font-weight: 600; text-decoration: none; }
 </style>
