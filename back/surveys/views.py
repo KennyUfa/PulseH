@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import Survey
-from .serializers import SurveySerializer, SurveyResponseSerializer
+from .models import SurveyResponse
+from .serializers import SurveySerializer, SurveyResponseSerializer, SurveyResponseDetailSerializer
 
 
 class SurveyViewSet(ModelViewSet):
@@ -29,3 +30,15 @@ class SurveyViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({'detail': 'Ответы сохранены'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='my_response')
+    def my_response(self, request, pk=None):
+        survey = self.get_object()
+        if survey.is_anonymous:
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+        response = SurveyResponse.objects.filter(
+            survey=survey, user=request.user
+        ).prefetch_related('answers__selected_options').first()
+        if not response:
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+        return Response(SurveyResponseDetailSerializer(response).data)

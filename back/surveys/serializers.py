@@ -55,6 +55,22 @@ class SurveySerializer(serializers.ModelSerializer):
         return survey
 
 
+class AnswerDetailSerializer(serializers.ModelSerializer):
+    selected_options = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = Answer
+        fields = ('question', 'selected_options')
+
+
+class SurveyResponseDetailSerializer(serializers.ModelSerializer):
+    answers = AnswerDetailSerializer(many=True)
+
+    class Meta:
+        model = SurveyResponse
+        fields = ('id', 'submitted_at', 'answers')
+
+
 class AnswerSubmitSerializer(serializers.Serializer):
     question = serializers.PrimaryKeyRelatedField(queryset=Question.objects.all())
     selected_options = serializers.PrimaryKeyRelatedField(

@@ -7,3 +7,4 @@ export const updateSurvey = (id, data) => api.put(`/surveys/surveys/${id}/`, dat
 export const patchSurvey = (id, data) => api.patch(`/surveys/surveys/${id}/`, data)
 export const deleteSurvey = (id) => api.delete(`/surveys/surveys/${id}/`)
 export const submitSurveyResponse = (id, data) => api.post(`/surveys/surveys/${id}/respond/`, data)
+export const getMyResponse = (id) => api.get(`/surveys/surveys/${id}/my_response/`)
