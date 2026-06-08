@@ -64,3 +64,25 @@ class AnswerOption(models.Model):
 
     def __str__(self):
         return self.text
+
+
+class SurveyResponse(models.Model):
+    # Одно прохождение опроса одним пользователем
+    survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='responses')
+    user = models.ForeignKey(                        # Null для анонимных опросов
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='responses'
+    )
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Response to "{self.survey}" by {self.user or "anonymous"}'
+
+
+class Answer(models.Model):
+    # Ответ на один вопрос в рамках SurveyResponse
+    response = models.ForeignKey(SurveyResponse, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    selected_options = models.ManyToManyField(AnswerOption, blank=True)
+
+    def __str__(self):
+        return f'Answer to "{self.question}"'
