@@ -92,19 +92,19 @@ onMounted(async () => {
   background: #fff;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
-.logo { font-size: 1.3rem; font-weight: 700; color: #4f46e5; }
+.logo { font-size: 1.3rem; font-weight: 700; color: #E8390E; }
 .topbar-actions { display: flex; gap: 0.75rem; align-items: center; }
 
 .btn-create {
   padding: 0.4rem 1rem;
-  background: #4f46e5;
+  background: #E8390E;
   color: #fff;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
 }
-.btn-create:hover { background: #4338ca; }
+.btn-create:hover { background: #c92e0b; }
 
 .back-btn {
   background: none;
@@ -115,7 +115,7 @@ onMounted(async () => {
   font-size: 0.9rem;
   color: #555;
 }
-.back-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+.back-btn:hover { border-color: #E8390E; color: #E8390E; }
 
 .content { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
 .content h1 { font-size: 1.6rem; margin-bottom: 1.5rem; }
@@ -137,7 +137,7 @@ onMounted(async () => {
   cursor: pointer;
   transition: box-shadow 0.15s;
 }
-.survey-card:hover { box-shadow: 0 4px 16px rgba(79,70,229,0.13); }
+.survey-card:hover { box-shadow: 0 4px 16px rgba(232,57,14,0.16); }
 .survey-main { flex: 1; min-width: 0; }
 .survey-title { font-size: 1rem; font-weight: 600; color: #1a1a1a; }
 .survey-desc {
@@ -176,11 +176,11 @@ onMounted(async () => {
   padding: 0.25rem 0.75rem;
   font-size: 0.8rem;
   background: none;
-  border: 1px solid #c7c7f0;
+  border: 1px solid #f5b7a8;
   border-radius: 6px;
-  color: #4f46e5;
+  color: #E8390E;
   cursor: pointer;
   white-space: nowrap;
 }
-.btn-edit:hover { background: #f0f0ff; }
+.btn-edit:hover { background: #FFF3F0; }
 </style>

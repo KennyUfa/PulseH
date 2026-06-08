@@ -250,7 +250,7 @@ async function submit() {
   background: #fff;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
-.logo { font-size: 1.3rem; font-weight: 700; color: #4f46e5; }
+.logo { font-size: 1.3rem; font-weight: 700; color: #E8390E; }
 .back-btn {
   background: none;
   border: 1px solid #ddd;
@@ -260,7 +260,7 @@ async function submit() {
   font-size: 0.9rem;
   color: #555;
 }
-.back-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+.back-btn:hover { border-color: #E8390E; color: #E8390E; }
 
 .content { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
 
@@ -289,14 +289,14 @@ async function submit() {
 .result-card p { color: #666; margin: 0 0 1.5rem; }
 .btn-action {
   padding: 0.6rem 1.5rem;
-  background: #4f46e5;
+  background: #E8390E;
   color: #fff;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.95rem;
 }
-.btn-action:hover { background: #4338ca; }
+.btn-action:hover { background: #c92e0b; }
 
 /* Survey header */
 .survey-header {
@@ -363,7 +363,7 @@ async function submit() {
 }
 .question-card.read-only { opacity: 0.9; }
 
-.question-num { font-size: 0.8rem; font-weight: 600; color: #4f46e5; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.question-num { font-size: 0.8rem; font-weight: 600; color: #E8390E; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .question-text { font-size: 1rem; font-weight: 600; color: #1a1a1a; margin-bottom: 1rem; }
 
 .options-list { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -379,7 +379,7 @@ async function submit() {
   transition: background 0.1s;
 }
 label.option-row { cursor: pointer; }
-label.option-row:hover { background: #f5f4ff; }
+label.option-row:hover { background: #FFF3F0; }
 
 .option-row.selected {
   background: #f0fdf4;
@@ -400,14 +400,14 @@ label.option-row:hover { background: #f5f4ff; }
 }
 .btn-submit {
   padding: 0.7rem 2rem;
-  background: #4f46e5;
+  background: #E8390E;
   color: #fff;
   border: none;
   border-radius: 8px;
   font-size: 1rem;
   cursor: pointer;
 }
-.btn-submit:hover:not(:disabled) { background: #4338ca; }
+.btn-submit:hover:not(:disabled) { background: #c92e0b; }
 .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 .inactive-hint { font-size: 0.85rem; color: #999; }
 </style>
