@@ -31,6 +31,7 @@ onMounted(async () => {
     form.is_anonymous = data.is_anonymous
     form.status = data.status
     form.questions = data.questions.map(q => ({
+      id: q.id,
       text: q.text, question_type: q.question_type, order: q.order,
       options: q.options.map(o => ({ text: o.text, order: o.order })),
       condition_question_index: q.condition_question_index ?? null,
@@ -72,12 +73,22 @@ function conditionValue(q) {
   return JSON.stringify([q.condition_question_index, q.condition_option_text])
 }
 
+function flattenErrors(obj, prefix = '') {
+  if (typeof obj === 'string') return obj
+  if (Array.isArray(obj)) return obj.map(v => flattenErrors(v, prefix)).filter(Boolean).join('; ')
+  if (typeof obj === 'object' && obj !== null) {
+    return Object.entries(obj).map(([k, v]) => flattenErrors(v, prefix ? `${prefix}.${k}` : k)).filter(Boolean).join('; ')
+  }
+  return ''
+}
+
 async function submit() {
   error.value = ''
   if (!form.title.trim()) { error.value = 'Введите название опроса'; return }
   const payload = {
     ...form,
     questions: form.questions.map((q, qi) => ({
+      ...(q.id ? { id: q.id } : {}),
       text: q.text, question_type: q.question_type, order: qi,
       options: (q.question_type === 'single' || q.question_type === 'multiple')
         ? q.options.filter(o => o.text.trim()).map((o, oi) => ({ text: o.text, order: oi })) : [],
@@ -85,9 +96,24 @@ async function submit() {
       condition_option_text: q.condition_option_text,
     })),
   }
+  for (const [qi, q] of form.questions.entries()) {
+    if (!q.text.trim()) { error.value = `Вопрос ${qi + 1}: введите текст вопроса`; return }
+    if ((q.question_type === 'single' || q.question_type === 'multiple') &&
+        !q.options.some(o => o.text.trim())) {
+      error.value = `Вопрос ${qi + 1}: добавьте хотя бы один вариант ответа`; return
+    }
+  }
   saving.value = true
   try { await updateSurvey(route.params.id, payload); router.push('/surveys') }
-  catch (e) { error.value = e.response?.data?.detail || 'Ошибка при сохранении' }
+  catch (e) {
+    const d = e.response?.data
+    if (typeof d === 'object' && d !== null) {
+      const flat = flattenErrors(d)
+      error.value = flat || 'Ошибка при сохранении'
+    } else {
+      error.value = 'Ошибка при сохранении'
+    }
+  }
   finally { saving.value = false }
 }
 </script>

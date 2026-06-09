@@ -9,6 +9,8 @@ const data = ref(null)
 const loading = ref(true)
 const error = ref('')
 const openResponse = ref(null)
+const statsOpen = ref(false)
+const openQuestion = ref(null)
 
 const STATUS_LABEL = { draft: 'Черновик', active: 'Активный', completed: 'Завершён', archived: 'Архив' }
 const STATUS_BADGE = {
@@ -54,6 +56,29 @@ function npsColor(score) {
   return 'text-red-600'
 }
 
+const questionStats = computed(() => {
+  if (!data.value?.questions?.length || !data.value?.responses?.length) return []
+  return data.value.questions.map(q => {
+    const answers = data.value.responses.flatMap(r => r.answers.filter(a => a.question_id === q.id))
+    if (q.question_type === 'single' || q.question_type === 'multiple') {
+      const counts = {}
+      for (const a of answers) for (const opt of a.selected_options) counts[opt] = (counts[opt] || 0) + 1
+      const total = answers.length
+      const options = Object.entries(counts)
+        .map(([text, count]) => ({ text, count, pct: pct(count, total) }))
+        .sort((a, b) => b.count - a.count)
+      return { ...q, kind: 'choice', options, total }
+    }
+    if (q.question_type === 'scale' || q.question_type === 'nps') {
+      const scores = answers.map(a => parseFloat(a.text_answer)).filter(n => !isNaN(n))
+      const avg = scores.length ? +(scores.reduce((s, n) => s + n, 0) / scores.length).toFixed(1) : null
+      return { ...q, kind: 'scale', avg, count: scores.length }
+    }
+    return { ...q, kind: 'text', count: answers.filter(a => a.text_answer).length }
+  })
+})
+
+function toggleQuestion(id) { openQuestion.value = openQuestion.value === id ? null : id }
 function pct(n, total) { return total ? Math.round((n / total) * 100) : 0 }
 function toggle(id) { openResponse.value = openResponse.value === id ? null : id }
 function fmtDate(iso) {
@@ -146,6 +171,83 @@ function answerDisplay(ans) {
           <div class="flex justify-between text-xs text-gray-400 mt-1">
             <span>Критики</span>
             <span>Промоутеры</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Статистика по вопросам -->
+      <div v-if="questionStats.length" class="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
+        <button
+          class="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+          @click="statsOpen = !statsOpen"
+        >
+          <span class="font-semibold text-gray-800 text-sm">Статистика по вопросам</span>
+          <span class="text-gray-400 text-xl transition-transform duration-200 inline-block" :class="statsOpen ? 'rotate-90' : ''">›</span>
+        </button>
+
+        <div v-if="statsOpen" class="border-t border-gray-100">
+          <div v-for="q in questionStats" :key="q.id" class="border-b border-gray-50 last:border-b-0">
+            <!-- Заголовок вопроса -->
+            <button
+              class="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors text-left"
+              @click="toggleQuestion(q.id)"
+            >
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <span class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+                  :class="{
+                    'bg-indigo-100 text-indigo-700': q.question_type === 'single',
+                    'bg-violet-100 text-violet-700': q.question_type === 'multiple',
+                    'bg-amber-100 text-amber-700': q.question_type === 'scale',
+                    'bg-green-100 text-green-700': q.question_type === 'nps',
+                    'bg-gray-100 text-gray-500': q.question_type === 'text',
+                  }">
+                  {{ { single: 'Один вариант', multiple: 'Несколько', scale: 'Шкала', nps: 'NPS', text: 'Текст' }[q.question_type] }}
+                </span>
+                <span class="text-sm text-gray-800 truncate">{{ q.text }}</span>
+              </div>
+              <span class="text-gray-400 text-lg transition-transform duration-200 inline-block ml-3 shrink-0" :class="openQuestion === q.id ? 'rotate-90' : ''">›</span>
+            </button>
+
+            <!-- Статистика вопроса -->
+            <div v-if="openQuestion === q.id" class="px-5 pb-4">
+              <!-- Выбор варианта(ов) -->
+              <template v-if="q.kind === 'choice'">
+                <p class="text-xs text-gray-400 mb-3">{{ q.total }} ответ{{ q.total === 1 ? '' : q.total < 5 ? 'а' : 'ов' }}</p>
+                <div v-if="q.options.length === 0" class="text-sm text-gray-400">Нет ответов</div>
+                <div v-else class="flex flex-col gap-2">
+                  <div v-for="(opt, i) in q.options" :key="opt.text" class="flex items-center gap-3">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-800 truncate max-w-[70%]">
+                          <span v-if="i === 0" class="text-amber-500 font-bold mr-1">★</span>{{ opt.text }}
+                        </span>
+                        <span class="text-sm font-semibold text-indigo-600 shrink-0 ml-2">{{ opt.count }} <span class="text-gray-400 font-normal text-xs">({{ opt.pct }}%)</span></span>
+                      </div>
+                      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-500"
+                          :class="i === 0 ? 'bg-indigo-600' : 'bg-indigo-200'"
+                          :style="{ width: opt.pct + '%' }" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Шкала / NPS -->
+              <template v-else-if="q.kind === 'scale'">
+                <p class="text-xs text-gray-400 mb-3">{{ q.count }} ответ{{ q.count === 1 ? '' : q.count < 5 ? 'а' : 'ов' }}</p>
+                <div v-if="q.avg === null" class="text-sm text-gray-400">Нет ответов</div>
+                <div v-else class="flex items-baseline gap-2">
+                  <span class="text-4xl font-bold text-indigo-600">{{ q.avg }}</span>
+                  <span class="text-gray-400 text-sm">/ {{ q.question_type === 'nps' ? '10' : '10' }} — среднее значение</span>
+                </div>
+              </template>
+
+              <!-- Текст -->
+              <template v-else>
+                <p class="text-sm text-gray-400">Текстовые ответы не агрегируются. Смотри в карточках участников ниже.</p>
+              </template>
+            </div>
           </div>
         </div>
       </div>

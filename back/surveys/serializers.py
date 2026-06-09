@@ -9,6 +9,7 @@ class AnswerOptionSerializer(serializers.ModelSerializer):
 
 
 class QuestionSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
     options = AnswerOptionSerializer(many=True)
 
     class Meta:
@@ -40,14 +41,27 @@ class SurveySerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         if questions_data is not None:
-            instance.questions.all().delete()
+            existing = {q.id: q for q in instance.questions.all()}
+            seen_ids = set()
             for i, q_data in enumerate(questions_data):
+                q_id = q_data.pop('id', None)
                 options_data = q_data.pop('options', [])
-                q_data.setdefault('order', i)
-                question = Question.objects.create(survey=instance, **q_data)
+                q_data['order'] = i
+                if q_id and q_id in existing:
+                    question = existing[q_id]
+                    for attr, val in q_data.items():
+                        setattr(question, attr, val)
+                    question.save()
+                    seen_ids.add(q_id)
+                else:
+                    question = Question.objects.create(survey=instance, **q_data)
+                question.options.all().delete()
                 for j, o_data in enumerate(options_data):
                     o_data.setdefault('order', j)
                     AnswerOption.objects.create(question=question, **o_data)
+            ids_to_delete = set(existing) - seen_ids
+            if ids_to_delete:
+                instance.questions.filter(id__in=ids_to_delete).delete()
         return instance
 
     def create(self, validated_data):
