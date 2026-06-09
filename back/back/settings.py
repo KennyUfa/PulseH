@@ -86,6 +86,9 @@ SIMPLE_JWT = {
 _cors_origins = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(',')]
 
+_csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8080')
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',')]
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
