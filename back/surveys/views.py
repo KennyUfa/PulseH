@@ -44,8 +44,6 @@ class SurveyViewSet(ModelViewSet):
     @action(detail=True, methods=['get'], url_path='my_response')
     def my_response(self, request, pk=None):
         survey = self.get_object()
-        if survey.is_anonymous:
-            return Response(None, status=status.HTTP_204_NO_CONTENT)
         response = SurveyResponse.objects.filter(
             survey=survey, user=request.user
         ).prefetch_related('answers__selected_options').first()

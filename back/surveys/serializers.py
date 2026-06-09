@@ -34,7 +34,7 @@ class SurveySerializer(serializers.ModelSerializer):
 
     def get_has_responded(self, obj):
         request = self.context.get('request')
-        if not request or obj.is_anonymous:
+        if not request or not request.user.is_authenticated:
             return False
         return obj.responses.filter(user=request.user).exists()
 
