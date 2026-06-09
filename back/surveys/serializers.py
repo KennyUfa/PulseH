@@ -155,9 +155,7 @@ class SurveyResponseSerializer(serializers.Serializer):
     def create(self, validated_data):
         survey = self.context['survey']
         request = self.context['request']
-        user = None if survey.is_anonymous else request.user
-
-        response = SurveyResponse.objects.create(survey=survey, user=user)
+        response = SurveyResponse.objects.create(survey=survey, user=request.user)
         for a in validated_data['answers']:
             answer = Answer.objects.create(
                 response=response,
