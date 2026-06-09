@@ -1,16 +1,24 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework import status
-from .models import Survey
-from .models import SurveyResponse
+from .models import Survey, SurveyResponse
 from .serializers import SurveySerializer, SurveyResponseSerializer, SurveyResponseDetailSerializer
+
+
+class IsHR(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.is_hr)
 
 
 class SurveyViewSet(ModelViewSet):
     serializer_class = SurveySerializer
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve', 'respond', 'my_response'):
+            return [IsAuthenticated()]
+        return [IsHR()]
 
     def get_queryset(self):
         return Survey.objects.prefetch_related('questions__options').all()
@@ -23,6 +31,9 @@ class SurveyViewSet(ModelViewSet):
         survey = self.get_object()
         if survey.status != Survey.STATUS_ACTIVE:
             return Response({'detail': 'Опрос недоступен для прохождения'}, status=status.HTTP_400_BAD_REQUEST)
+        if not survey.is_anonymous:
+            if SurveyResponse.objects.filter(survey=survey, user=request.user).exists():
+                return Response({'detail': 'Вы уже прошли этот опрос'}, status=status.HTTP_400_BAD_REQUEST)
         serializer = SurveyResponseSerializer(
             data=request.data,
             context={'survey': survey, 'request': request}

@@ -33,7 +33,7 @@ onMounted(async () => {
     form.questions = data.questions.map(q => ({
       id: q.id,
       text: q.text, question_type: q.question_type, order: q.order,
-      options: q.options.map(o => ({ text: o.text, order: o.order })),
+      options: q.options.map(o => ({ id: o.id, text: o.text, order: o.order })),
       condition_question_index: q.condition_question_index ?? null,
       condition_option_text: q.condition_option_text || '',
     }))
@@ -91,7 +91,7 @@ async function submit() {
       ...(q.id ? { id: q.id } : {}),
       text: q.text, question_type: q.question_type, order: qi,
       options: (q.question_type === 'single' || q.question_type === 'multiple')
-        ? q.options.filter(o => o.text.trim()).map((o, oi) => ({ text: o.text, order: oi })) : [],
+        ? q.options.filter(o => o.text.trim()).map((o, oi) => ({ ...(o.id ? { id: o.id } : {}), text: o.text, order: oi })) : [],
       condition_question_index: q.condition_question_index,
       condition_option_text: q.condition_option_text,
     })),
