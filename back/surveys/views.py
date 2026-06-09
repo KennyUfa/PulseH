@@ -31,9 +31,8 @@ class SurveyViewSet(ModelViewSet):
         survey = self.get_object()
         if survey.status != Survey.STATUS_ACTIVE:
             return Response({'detail': 'Опрос недоступен для прохождения'}, status=status.HTTP_400_BAD_REQUEST)
-        if not survey.is_anonymous:
-            if SurveyResponse.objects.filter(survey=survey, user=request.user).exists():
-                return Response({'detail': 'Вы уже прошли этот опрос'}, status=status.HTTP_400_BAD_REQUEST)
+        if SurveyResponse.objects.filter(survey=survey, user=request.user).exists():
+            return Response({'detail': 'Вы уже прошли этот опрос'}, status=status.HTTP_400_BAD_REQUEST)
         serializer = SurveyResponseSerializer(
             data=request.data,
             context={'survey': survey, 'request': request}
