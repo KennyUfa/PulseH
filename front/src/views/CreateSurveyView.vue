@@ -24,6 +24,8 @@ const form = reactive({
   description: '',
   is_anonymous: false,
   status: 'draft',
+  start_date: '',
+  end_date: '',
   questions: [],
 })
 
@@ -72,6 +74,10 @@ async function submit() {
       condition_option_text: q.condition_option_text,
     })),
   }
+  if (form.start_date) payload.start_date = new Date(form.start_date).toISOString()
+  else payload.start_date = null
+  if (form.end_date) payload.end_date = new Date(form.end_date).toISOString()
+  else payload.end_date = null
   loading.value = true
   try { await createSurvey(payload); router.push('/') }
   catch (e) { error.value = e.response?.data?.detail || 'Ошибка при сохранении опроса' }
@@ -102,6 +108,19 @@ async function submit() {
         <select v-model="form.status" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none bg-white focus:border-indigo-500 cursor-pointer">
           <option v-for="s in STATUS_OPTIONS" :key="s.value" :value="s.value">{{ s.label }}</option>
         </select>
+      </div>
+
+      <div class="flex gap-4 mb-4">
+        <div class="flex-1">
+          <Label class="mb-1.5 block">Начало опроса</Label>
+          <input v-model="form.start_date" type="datetime-local" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+          <p class="text-xs text-gray-400 mt-0.5">Авто-активация в указанное время</p>
+        </div>
+        <div class="flex-1">
+          <Label class="mb-1.5 block">Окончание опроса</Label>
+          <input v-model="form.end_date" type="datetime-local" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+          <p class="text-xs text-gray-400 mt-0.5">Авто-завершение, напоминание заранее</p>
+        </div>
       </div>
 
       <div class="flex items-center justify-between">

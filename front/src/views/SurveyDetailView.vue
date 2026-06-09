@@ -20,6 +20,16 @@ const submitError = ref('')
 const answers = reactive({})
 
 const STATUS_LABEL = { draft: 'Черновик', active: 'Активный', completed: 'Завершён', archived: 'Архив' }
+
+const deadlineBadge = computed(() => {
+  if (!survey.value?.end_date) return null
+  const diff = new Date(survey.value.end_date) - Date.now()
+  if (diff <= 0) return { text: 'Истёк', cls: 'bg-red-100 text-red-600' }
+  const days = Math.ceil(diff / 86400000)
+  if (days === 0) return { text: 'Сегодня', cls: 'bg-orange-100 text-orange-600' }
+  return { text: `Осталось ${days} дн.`, cls: days <= 3 ? 'bg-orange-100 text-orange-600' : 'bg-blue-50 text-blue-600' }
+})
+
 const STATUS_BADGE = {
   draft: 'bg-gray-100 text-gray-600',
   active: 'bg-green-100 text-green-700',
@@ -138,6 +148,7 @@ async function submit() {
           <h1 class="text-xl font-bold text-gray-900">{{ survey.title }}</h1>
           <div class="flex gap-2 shrink-0 flex-wrap">
             <span class="text-xs font-medium px-2.5 py-0.5 rounded-full" :class="STATUS_BADGE[survey.status]">{{ STATUS_LABEL[survey.status] }}</span>
+            <span v-if="deadlineBadge" class="text-xs font-medium px-2.5 py-0.5 rounded-full" :class="deadlineBadge.cls">{{ deadlineBadge.text }}</span>
             <span v-if="survey.is_anonymous" class="text-xs font-medium bg-violet-100 text-violet-700 px-2.5 py-0.5 rounded-full">Анонимный</span>
           </div>
         </div>

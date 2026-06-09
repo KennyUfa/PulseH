@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSurveys } from '@/api/surveys'
 import AppLayout from '@/components/AppLayout.vue'
@@ -8,13 +8,22 @@ const router = useRouter()
 const activeSurveys = ref([])
 const search = ref('')
 
-onMounted(async () => {
+async function fetchSurveys() {
   try {
     const { data } = await getSurveys()
     const all = data.results ?? data
     activeSurveys.value = all.filter(s => s.status === 'active')
   } catch {}
+}
+
+let pollTimer = null
+
+onMounted(() => {
+  fetchSurveys()
+  pollTimer = setInterval(fetchSurveys, 30000)
 })
+
+onUnmounted(() => { clearInterval(pollTimer) })
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -24,6 +33,15 @@ const filtered = computed(() => {
 
 function plural(n) {
   return n === 1 ? 'вопрос' : n < 5 ? 'вопроса' : 'вопросов'
+}
+
+function deadlineBadge(survey) {
+  if (!survey.end_date) return null
+  const diff = new Date(survey.end_date) - Date.now()
+  if (diff <= 0) return { text: 'Истёк', cls: 'bg-red-100 text-red-600' }
+  const days = Math.ceil(diff / 86400000)
+  if (days === 0) return { text: 'Сегодня', cls: 'bg-orange-100 text-orange-600' }
+  return { text: `Осталось ${days} дн.`, cls: days <= 3 ? 'bg-orange-100 text-orange-600' : 'bg-blue-50 text-blue-600' }
 }
 </script>
 
@@ -57,6 +75,7 @@ function plural(n) {
         </div>
         <div class="flex flex-col items-end gap-1 shrink-0">
           <span v-if="s.has_responded" class="text-xs font-semibold bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full">✓ Пройден</span>
+          <span v-if="deadlineBadge(s)" class="text-xs font-medium px-2.5 py-0.5 rounded-full" :class="deadlineBadge(s).cls">{{ deadlineBadge(s).text }}</span>
           <span v-if="s.is_anonymous" class="text-xs font-medium bg-violet-100 text-violet-700 px-2.5 py-0.5 rounded-full">Анон</span>
           <span class="text-xs text-gray-400">{{ s.questions.length }} {{ plural(s.questions.length) }}</span>
         </div>

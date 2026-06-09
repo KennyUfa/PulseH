@@ -26,6 +26,7 @@ class SurveySerializer(serializers.ModelSerializer):
     class Meta:
         model = Survey
         fields = ('id', 'title', 'description', 'is_anonymous', 'status',
+                  'start_date', 'end_date',
                   'created_by', 'created_at', 'questions', 'has_responded')
         read_only_fields = ('id', 'created_by', 'created_at', 'has_responded')
 
@@ -36,10 +37,17 @@ class SurveySerializer(serializers.ModelSerializer):
         return obj.responses.filter(user=request.user).exists()
 
     def update(self, instance, validated_data):
+        old_status = instance.status
         questions_data = validated_data.pop('questions', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        if old_status != 'active' and instance.status == 'active':
+            try:
+                from notifications.push import send_push_to_all
+                send_push_to_all(instance)
+            except Exception:
+                pass
         if questions_data is not None:
             existing = {q.id: q for q in instance.questions.all()}
             seen_ids = set()

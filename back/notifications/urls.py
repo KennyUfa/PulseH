@@ -1,8 +1,8 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-
-router = DefaultRouter()
+from django.urls import path
+from .views import VapidPublicKeyView, SubscribeView, UnsubscribeView
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('push/vapid-key/', VapidPublicKeyView.as_view()),
+    path('push/subscribe/', SubscribeView.as_view()),
+    path('push/unsubscribe/', UnsubscribeView.as_view()),
 ]

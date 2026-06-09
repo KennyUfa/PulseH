@@ -5,3 +5,5 @@ django-filter==25.2
 djangorestframework==3.17.1
 djangorestframework-simplejwt==5.5.1
 sqlparse==0.5.5
+pywebpush==2.3.0
+apscheduler==3.11.2

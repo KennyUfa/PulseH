@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./back
+    env_file: .env
+    volumes:
+      - sqlite_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./front
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:

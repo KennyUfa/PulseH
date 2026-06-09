@@ -15,10 +15,13 @@ class Survey(models.Model):
         (STATUS_ARCHIVED, 'Архив'),
     ]
 
-    title = models.CharField(max_length=255)           # Название опроса
-    description = models.TextField(blank=True)         # Описание / инструкция для сотрудника
-    is_anonymous = models.BooleanField(default=False)  # Если True — ответы не привязываются к пользователю
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    is_anonymous = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    reminder_sent = models.BooleanField(default=False)
     created_by = models.ForeignKey(                    # HR, создавший опрос
         User, on_delete=models.SET_NULL, null=True, related_name='surveys'
     )
