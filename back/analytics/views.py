@@ -1,42 +1,46 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from django.db.models import Count
 from surveys.models import Survey
 from users.models import User
 
 
+class IsHRPermission(IsAuthenticated):
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and request.user.is_hr
+
+
 class SurveyResultsListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsHRPermission]
 
     def get(self, request):
-        if not request.user.is_hr:
-            return Response({'detail': 'Доступ запрещён'}, status=403)
-
-        surveys = Survey.objects.all().order_by('-created_at')
         total_users = User.objects.filter(is_active=True).count()
-
-        result = []
-        for s in surveys:
-            completed = s.responses.count()
-            result.append({
+        surveys = (
+            Survey.objects
+            .annotate(completed_count=Count('responses'))
+            .order_by('-created_at')
+        )
+        result = [
+            {
                 'id': s.id,
                 'title': s.title,
                 'status': s.status,
                 'is_anonymous': s.is_anonymous,
                 'total_users': total_users,
-                'completed_count': completed,
-                'not_completed_count': max(0, total_users - completed),
-            })
+                'completed_count': s.completed_count,
+                'not_completed_count': max(0, total_users - s.completed_count),
+            }
+            for s in surveys
+        ]
         return Response(result)
 
 
 class SurveyResultsDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsHRPermission]
 
     def get(self, request, pk):
-        if not request.user.is_hr:
-            return Response({'detail': 'Доступ запрещён'}, status=403)
-
         try:
             survey = Survey.objects.prefetch_related(
                 'questions__options',
@@ -45,15 +49,15 @@ class SurveyResultsDetailView(APIView):
                 'responses__user',
             ).get(pk=pk)
         except Survey.DoesNotExist:
-            return Response({'detail': 'Не найден'}, status=404)
+            return Response({'detail': 'Не найден'}, status=status.HTTP_404_NOT_FOUND)
 
         total_users = User.objects.filter(is_active=True).count()
-        completed = survey.responses.count()
+        completed = len(survey.responses.all())
 
         responses = []
         for resp in survey.responses.all():
             answers = []
-            for ans in resp.answers.select_related('question').prefetch_related('selected_options').all():
+            for ans in resp.answers.all():
                 answers.append({
                     'question_id': ans.question_id,
                     'question_text': ans.question.text,

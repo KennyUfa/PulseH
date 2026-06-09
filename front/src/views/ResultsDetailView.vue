@@ -30,10 +30,10 @@ const npsStats = computed(() => {
   if (!data.value?.responses?.length) return []
   const map = {}
   for (const resp of data.value.responses) {
-    for (const ans of resp.answers) {
+    for (const ans of (resp.answers ?? [])) {
       if (ans.question_type === 'nps') {
         if (!map[ans.question_id]) map[ans.question_id] = { id: ans.question_id, text: ans.question_text, scores: [] }
-        const s = parseInt(ans.text_answer)
+        const s = parseInt(ans.text_answer ?? '')
         if (!isNaN(s)) map[ans.question_id].scores.push(s)
       }
     }
@@ -59,7 +59,7 @@ function npsColor(score) {
 const questionStats = computed(() => {
   if (!data.value?.questions?.length || !data.value?.responses?.length) return []
   return data.value.questions.map(q => {
-    const answers = data.value.responses.flatMap(r => r.answers.filter(a => a.question_id === q.id))
+    const answers = data.value.responses.flatMap(r => (r.answers ?? []).filter(a => a.question_id === q.id))
     if (q.question_type === 'single' || q.question_type === 'multiple') {
       const counts = {}
       for (const a of answers) for (const opt of a.selected_options) counts[opt] = (counts[opt] || 0) + 1
