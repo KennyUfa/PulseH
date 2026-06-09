@@ -2,10 +2,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY back/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
-COPY . .
+COPY back/ .
 
 RUN mkdir -p /app/data && chmod 777 /app/data
 
